@@ -4,14 +4,13 @@
 
 use core::fmt;
 
+use internals::write_err;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use internals::write_err;
-
+use crate::parse::{self, ParseIntError};
 #[cfg(feature = "alloc")]
 use crate::prelude::*;
-use crate::parse::{self, ParseIntError};
 
 /// The Threshold for deciding whether a lock time value is a height or a time (see [Bitcoin Core]).
 ///
@@ -44,7 +43,9 @@ impl Height {
     /// Creates a `Height` from a hex string.
     ///
     /// The input string is may or may not contain a typical hex prefix e.g., `0x`.
-    pub fn from_hex(s: &str) -> Result<Self, ParseHeightError> { parse_hex(s, Self::from_consensus) }
+    pub fn from_hex(s: &str) -> Result<Self, ParseHeightError> {
+        parse_hex(s, Self::from_consensus)
+    }
 
     /// Constructs a new block height.
     ///
@@ -194,7 +195,8 @@ where
     S: AsRef<str> + Into<String>,
     F: FnOnce(u32) -> Result<T, ConversionError>,
 {
-    let n = i64::from_str_radix(parse::strip_hex_prefix(s.as_ref()), 16).map_err(ParseError::invalid_int(s))?;
+    let n = i64::from_str_radix(parse::strip_hex_prefix(s.as_ref()), 16)
+        .map_err(ParseError::invalid_int(s))?;
     let n = u32::try_from(n).map_err(|_| ParseError::Conversion(n))?;
     f(n).map_err(ParseError::from).map_err(Into::into)
 }
@@ -270,7 +272,13 @@ impl ParseError {
         move |source| Self::InvalidInteger { source, input: s.into() }
     }
 
-    fn display(&self, f: &mut fmt::Formatter<'_>, subject: &str, lower_bound: u32, upper_bound: u32) -> fmt::Result {
+    fn display(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+        subject: &str,
+        lower_bound: u32,
+        upper_bound: u32,
+    ) -> fmt::Result {
         use core::num::IntErrorKind;
 
         use ParseError::*;
@@ -363,5 +371,4 @@ mod tests {
         let result = Height::from_hex(hex);
         assert!(result.is_err());
     }
-
 }
